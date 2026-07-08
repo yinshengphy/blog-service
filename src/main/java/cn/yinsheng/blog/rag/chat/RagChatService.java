@@ -135,7 +135,7 @@ public class RagChatService {
         score += Math.max(0, 0.02 - Math.min(0.02, ageDays / 3650.0));
       }
     } catch (Exception ignored) {
-      // updated_at is a weak ranking signal; ignore malformed values.
+      // updated_at 只是弱排序信号，格式异常时直接忽略。
     }
     return score;
   }

@@ -109,7 +109,7 @@ public class ChatController {
           .name("error")
           .data(Map.of("status", status, "message", message)));
     } catch (Exception ignored) {
-      // Ignore send failures during connection teardown.
+      // 连接关闭过程中发送失败可以忽略。
     } finally {
       emitter.complete();
     }
