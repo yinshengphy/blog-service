@@ -1,0 +1,37 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: blog-rag-api
+
+rag:
+  ai-compute-base-url: ${AI_COMPUTE_BASE_URL:http://ai-compute-gateway.ai.svc.cluster.local:8080}
+  ai-compute-token: ${AI_COMPUTE_API_TOKEN:}
+  chat-model: ${RAG_CHAT_MODEL:huihui-qwen3:4b-instruct-2507-abliterated-q4_K_M}
+  embedding-model: ${RAG_EMBEDDING_MODEL:bge-m3}
+  qdrant-url: ${QDRANT_URL:http://qdrant:6333}
+  qdrant-collection: ${QDRANT_COLLECTION:blog_chunks}
+  embedding-dimension: ${EMBEDDING_DIMENSION:1024}
+  top-k: ${RAG_TOP_K:3}
+  max-context-chars: ${RAG_MAX_CONTEXT_CHARS:8000}
+  max-answer-tokens: ${RAG_MAX_ANSWER_TOKENS:600}
+  chat-concurrency: ${CHAT_CONCURRENCY:1}
+  chat-queue-timeout-ms: ${CHAT_QUEUE_TIMEOUT_MS:30000}
+  request-timeout-seconds: ${REQUEST_TIMEOUT_SECONDS:120}
+  content-dir: ${BLOG_CONTENT_DIR:/app/content/posts}
+  index-db-path: ${INDEX_DB_PATH:/data/blog-indexer/index-status.db}
+  indexer-batch-size: ${INDEXER_BATCH_SIZE:6}
+  indexer-chat-status-url: ${INDEXER_CHAT_STATUS_URL:http://blog-rag-api.blog.svc.cluster.local:8080/internal/status}
+  site-base-path: ${SITE_BASE_PATH:/}
+  rate-limit-db-path: ${RATE_LIMIT_DB_PATH:/data/rate-limit.db}
+  rate-limit-per-minute: ${RATE_LIMIT_PER_MINUTE:10}
+  rate-limit-per-day: ${RATE_LIMIT_PER_DAY:100}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+
