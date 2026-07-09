@@ -32,6 +32,16 @@ class WeatherSkillTest {
     assertThat(skill.execute(request("今天下雨吗？")).answer()).contains("哪个城市");
   }
 
+  @Test
+  void shouldHandleProviderFailureGracefully() {
+    WeatherSkill skill = new WeatherSkill(city -> {
+      throw new IllegalStateException("天气服务不可用");
+    });
+
+    assertThat(skill.execute(request("上海今天下雨吗？")).answer())
+        .contains("暂时没能查到 上海 的天气数据");
+  }
+
   private SkillRequest request(String question) {
     return new SkillRequest(
         question,
