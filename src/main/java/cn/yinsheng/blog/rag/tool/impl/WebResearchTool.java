@@ -51,13 +51,23 @@ public class WebResearchTool implements ToolRegistry.ToolHandler {
     if (query.isBlank()) return ToolResult.failure(call, "A search query is required.");
     List<WebSearchResult> results = searchProvider.search(query, engine, category, page);
     String effectiveCategory = category;
+    String effectiveEngine = engine;
     if (results.isEmpty() && !"general".equalsIgnoreCase(category)) {
       results = searchProvider.search(query, engine, "general", page);
+      effectiveCategory = "general";
+    }
+    if (results.isEmpty() && !"auto".equalsIgnoreCase(engine)) {
+      results = searchProvider.search(query, "auto", "general", page);
+      effectiveEngine = "auto";
       effectiveCategory = "general";
     }
     if (results.isEmpty()) return ToolResult.failure(call, "The search provider returned no results.");
 
     StringBuilder content = new StringBuilder("Search query: ").append(query).append("\n");
+    if (!effectiveEngine.equalsIgnoreCase(engine)) {
+      content.append("Requested engine ").append(engine)
+          .append(" returned no results, so the search continued with the automatic engine set.\n");
+    }
     List<Citation> citations = new ArrayList<>();
     int fetched = 0;
     for (WebSearchResult result : results) {
@@ -82,7 +92,14 @@ public class WebResearchTool implements ToolRegistry.ToolHandler {
       String snippet = evidence.length() <= 180 ? evidence : evidence.substring(0, 180) + "...";
       citations.add(new Citation(result.title(), result.engine(), result.url(), snippet));
     }
-    return ToolResult.success(call, content.toString(), citations, List.of(), Map.of("query", query, "engine", engine, "category", effectiveCategory, "page", page, "resultCount", citations.size()));
+    return ToolResult.success(call, content.toString(), citations, List.of(), Map.of(
+        "query", query,
+        "engine", engine,
+        "effectiveEngine", effectiveEngine,
+        "category", effectiveCategory,
+        "page", page,
+        "resultCount", citations.size()
+    ));
   }
 
   private int integerArg(Object value, int fallback) {

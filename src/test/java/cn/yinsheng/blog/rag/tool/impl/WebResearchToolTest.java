@@ -38,4 +38,27 @@ class WebResearchToolTest {
     verify(provider).search("AI news", "auto", "news", 1);
     verify(provider).search("AI news", "auto", "general", 1);
   }
+
+  @Test
+  void fallsBackToAutomaticEnginesWhenRequestedEngineIsUnavailable() {
+    WebSearchProvider provider = mock(WebSearchProvider.class);
+    when(provider.search("人工智能", "baidu", "general", 1)).thenReturn(List.of());
+    when(provider.search("人工智能", "auto", "general", 1)).thenReturn(List.of(
+        new WebSearchResult("AI update", "https://example.com/ai", "Recent AI update", "bing", "2026-07-11")
+    ));
+    WebPageReader reader = mock(WebPageReader.class);
+    when(reader.read("https://example.com/ai")).thenReturn("");
+    WebResearchTool tool = new WebResearchTool(provider, reader, new WebSearchProperties());
+
+    var result = tool.execute(
+        new ToolCall("1", "web_research", Map.of("query", "人工智能", "engine", "baidu")),
+        new ToolExecutionContext("", "", null)
+    );
+
+    assertThat(result.success()).isTrue();
+    assertThat(result.content()).contains("Requested engine baidu returned no results");
+    assertThat(result.metadata())
+        .containsEntry("engine", "baidu")
+        .containsEntry("effectiveEngine", "auto");
+  }
 }
