@@ -101,14 +101,18 @@ public class ChatOrchestrator {
     try {
       int loops = Math.max(1, Math.min(properties.getMaxToolCallsPerRequest(), 5));
       for (int loop = 0; loop <= loops; loop++) {
-        AiComputeClient.AgentTurn turn = aiComputeClient.streamCompletion(messages, definitions, deltaConsumer);
+        List<ToolDefinition> availableTools = usedTools.size() >= loops ? List.of() : definitions;
+        AiComputeClient.AgentTurn turn = aiComputeClient.streamCompletion(messages, availableTools, deltaConsumer);
         if (turn.toolCalls().isEmpty()) {
           answer = turn.content();
           break;
         }
         messages.add(assistantToolMessage(turn));
         for (ToolCall call : turn.toolCalls()) {
-          if (usedTools.size() >= loops) break;
+          if (usedTools.size() >= loops) {
+            messages.add(toolResultMessage(ToolResult.failure(call, "The tool call limit has been reached. Produce the best final answer from existing results.")));
+            continue;
+          }
           ToolResult result = toolExecutor.execute(call, new ToolExecutionContext(traceId, request.sessionId(), request.pageContext()));
           usedTools.add(call.name());
           mergeCitations(citations, result.citations());

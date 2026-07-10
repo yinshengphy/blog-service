@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AssistantSessionMemory {
-  private static final int MAX_MESSAGES = 8;
+  private static final int MAX_MESSAGES = 4;
+  private static final int MAX_MESSAGE_CHARS = 1000;
   private static final long TTL_MINUTES = 20;
   private final Map<String, SessionState> sessions = new ConcurrentHashMap<>();
 
@@ -27,8 +28,8 @@ public class AssistantSessionMemory {
   public void remember(String sessionId, String userMessage, String assistantMessage) {
     if (sessionId == null || sessionId.isBlank() || assistantMessage == null || assistantMessage.isBlank()) return;
     List<Map<String, Object>> messages = new ArrayList<>(history(sessionId));
-    messages.add(Map.of("role", "user", "content", userMessage));
-    messages.add(Map.of("role", "assistant", "content", assistantMessage));
+    messages.add(Map.of("role", "user", "content", compact(userMessage)));
+    messages.add(Map.of("role", "assistant", "content", compact(assistantMessage)));
     if (messages.size() > MAX_MESSAGES) {
       messages = new ArrayList<>(messages.subList(messages.size() - MAX_MESSAGES, messages.size()));
     }
@@ -37,6 +38,11 @@ public class AssistantSessionMemory {
 
   public void clear(String sessionId) {
     if (sessionId != null) sessions.remove(sessionId);
+  }
+
+  private String compact(String value) {
+    if (value == null) return "";
+    return value.length() <= MAX_MESSAGE_CHARS ? value : value.substring(0, MAX_MESSAGE_CHARS);
   }
 
   private record SessionState(List<Map<String, Object>> messages, Instant expiresAt) {

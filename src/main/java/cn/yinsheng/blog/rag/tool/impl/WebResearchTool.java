@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class WebResearchTool implements ToolRegistry.ToolHandler {
+  private static final int MAX_TOOL_CONTENT_CHARS = 7000;
   private final WebSearchProvider searchProvider;
   private final WebPageReader pageReader;
   private final WebSearchProperties properties;
@@ -60,6 +61,10 @@ public class WebResearchTool implements ToolRegistry.ToolHandler {
         fetched++;
       }
       String evidence = body.isBlank() ? result.snippet() : body;
+      int remaining = MAX_TOOL_CONTENT_CHARS - content.length();
+      if (remaining < 300) break;
+      int evidenceLimit = Math.min(2200, remaining - 200);
+      if (evidence.length() > evidenceLimit) evidence = evidence.substring(0, evidenceLimit);
       int index = citations.size() + 1;
       content.append("\n[Source ").append(index).append("]\n")
           .append("Title: ").append(result.title()).append('\n')
