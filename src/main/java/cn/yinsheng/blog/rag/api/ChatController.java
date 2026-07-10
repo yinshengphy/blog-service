@@ -15,6 +15,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -65,8 +68,21 @@ public class ChatController {
   public SseEmitter chatStream(@Valid @RequestBody ChatRequest request, HttpServletRequest httpRequest) {
     rateLimitService.checkAndRecord(clientIp(httpRequest));
     SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+    AtomicBoolean finished = new AtomicBoolean();
+    AtomicReference<Future<?>> taskRef = new AtomicReference<>();
+    Runnable cancelTask = () -> {
+      if (finished.compareAndSet(false, true)) {
+        Future<?> task = taskRef.get();
+        if (task != null) task.cancel(true);
+      }
+    };
+    emitter.onTimeout(cancelTask);
+    emitter.onError(ignored -> cancelTask.run());
+    emitter.onCompletion(() -> {
+      if (!finished.get()) cancelTask.run();
+    });
     try {
-      streamExecutor.execute(() -> {
+      Future<?> task = streamExecutor.submit(() -> {
       long startedAt = System.currentTimeMillis();
       boolean acquired = false;
       try {
@@ -82,6 +98,7 @@ public class ChatController {
         emitter.send(SseEmitter.event()
             .name("done")
             .data(Map.of("elapsedMs", System.currentTimeMillis() - startedAt)));
+        finished.set(true);
         emitter.complete();
       } catch (ChatBusyException ex) {
         sendError(emitter, HttpStatus.TOO_MANY_REQUESTS.value(), ex.getMessage());
@@ -92,7 +109,10 @@ public class ChatController {
         if (acquired) chatLimiter.leave();
       }
       });
+      taskRef.set(task);
+      if (finished.get() && !task.isDone()) task.cancel(true);
     } catch (RejectedExecutionException ex) {
+      finished.set(true);
       sendError(emitter, HttpStatus.TOO_MANY_REQUESTS.value(), "当前请求较多，请稍后再试。");
     }
     return emitter;
