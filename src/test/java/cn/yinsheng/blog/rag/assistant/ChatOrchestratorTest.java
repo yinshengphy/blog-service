@@ -27,8 +27,8 @@ class ChatOrchestratorTest {
     AiComputeClient ai = mock(AiComputeClient.class);
     when(ai.streamCompletion(anyList(), anyList(), any())).thenAnswer(invocation -> {
       Consumer<String> consumer = invocation.getArgument(2);
-      consumer.accept("动态笑话");
-      return new AiComputeClient.AgentTurn("动态笑话", List.of());
+      consumer.accept("动态笑话 [1]");
+      return new AiComputeClient.AgentTurn("动态笑话 [1]", List.of());
     });
     ToolRegistry registry = new ToolRegistry(List.of(handler("weather")));
     ChatOrchestrator orchestrator = orchestrator(ai, registry, new ModelRoutePlanner.RoutePlan(ModelRoutePlanner.Route.DIRECT, Map.of()));

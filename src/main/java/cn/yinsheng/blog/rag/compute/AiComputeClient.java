@@ -196,7 +196,7 @@ public class AiComputeClient {
     body.put("model", properties.chatModel());
     body.put("stream", true);
     body.put("max_tokens", properties.maxAnswerTokens());
-    body.put("temperature", 0.3);
+    body.put("temperature", 0.15);
     body.put("messages", messages);
     if (tools != null && !tools.isEmpty()) {
       body.put("tools", tools.stream().map(ToolDefinition::toOpenAiTool).toList());

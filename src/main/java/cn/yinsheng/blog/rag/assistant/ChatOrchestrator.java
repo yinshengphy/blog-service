@@ -147,6 +147,7 @@ public class ChatOrchestrator {
       if (answer.isBlank()) {
         throw new IllegalStateException("Agent completed without an answer");
       }
+      answer = sanitizeCitationMarkers(answer, citations.size());
       sessionMemory.remember(request.sessionId(), contextualQuestion, answer);
       return response(answer, usedTools.isEmpty() ? "DIRECT" : "TOOL", usedTools, citations, relatedPosts, metadata);
     } catch (RuntimeException ex) {
@@ -258,6 +259,13 @@ public class ChatOrchestrator {
 
   private String json(Object value) {
     try { return objectMapper.writeValueAsString(value); } catch (Exception ex) { return "{}"; }
+  }
+
+  private String sanitizeCitationMarkers(String answer, int citationCount) {
+    return java.util.regex.Pattern.compile("\\[(\\d+)]").matcher(answer).replaceAll(match -> {
+      int index = Integer.parseInt(match.group(1));
+      return index >= 1 && index <= citationCount ? match.group() : "";
+    }).replaceAll("[ \\t]+(?=\\r?$)", "").trim();
   }
 
   private void mergeCitations(List<Citation> target, List<Citation> values) {
