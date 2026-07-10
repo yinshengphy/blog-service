@@ -50,6 +50,11 @@ public class WebResearchTool implements ToolRegistry.ToolHandler {
     int page = integerArg(call.arguments().get("page"), 1);
     if (query.isBlank()) return ToolResult.failure(call, "A search query is required.");
     List<WebSearchResult> results = searchProvider.search(query, engine, category, page);
+    String effectiveCategory = category;
+    if (results.isEmpty() && !"general".equalsIgnoreCase(category)) {
+      results = searchProvider.search(query, engine, "general", page);
+      effectiveCategory = "general";
+    }
     if (results.isEmpty()) return ToolResult.failure(call, "The search provider returned no results.");
 
     StringBuilder content = new StringBuilder("Search query: ").append(query).append("\n");
@@ -77,7 +82,7 @@ public class WebResearchTool implements ToolRegistry.ToolHandler {
       String snippet = evidence.length() <= 180 ? evidence : evidence.substring(0, 180) + "...";
       citations.add(new Citation(result.title(), result.engine(), result.url(), snippet));
     }
-    return ToolResult.success(call, content.toString(), citations, List.of(), Map.of("query", query, "engine", engine, "category", category, "page", page, "resultCount", citations.size()));
+    return ToolResult.success(call, content.toString(), citations, List.of(), Map.of("query", query, "engine", engine, "category", effectiveCategory, "page", page, "resultCount", citations.size()));
   }
 
   private int integerArg(Object value, int fallback) {
