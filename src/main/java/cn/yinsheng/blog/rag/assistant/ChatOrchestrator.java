@@ -97,6 +97,12 @@ public class ChatOrchestrator {
     metaConsumer.accept(response("", "AGENT", usedTools, citations, relatedPosts, metadata));
 
     try {
+      String fixedAnswer = fixedAnswer(routePlan.route());
+      if (!fixedAnswer.isBlank()) {
+        deltaConsumer.accept(fixedAnswer);
+        sessionMemory.remember(request.sessionId(), contextualQuestion, fixedAnswer);
+        return response(fixedAnswer, "DIRECT", usedTools, citations, relatedPosts, metadata);
+      }
       int loops = Math.max(1, Math.min(properties.getMaxToolCallsPerRequest(), 5));
       if (!routePlan.toolName().isBlank()) {
         Map<String, Object> arguments = new LinkedHashMap<>(routePlan.arguments());
@@ -187,6 +193,20 @@ public class ChatOrchestrator {
     } catch (Exception ex) {
       return question.trim();
     }
+  }
+
+  private String fixedAnswer(ModelRoutePlanner.Route route) {
+    if (route == ModelRoutePlanner.Route.CAPABILITY) {
+      StringBuilder answer = new StringBuilder("我目前启用的站点能力有：\n");
+      for (ToolDefinition definition : toolRegistry.definitions()) {
+        answer.append("- ").append(definition.description()).append('\n');
+      }
+      return answer.append("此外，我可以直接进行普通聊天、技术问答、翻译、润色、计算和文本整理。当前不支持图片识别和公共网页搜索。").toString();
+    }
+    if (route == ModelRoutePlanner.Route.UNSUPPORTED) {
+      return "当前未启用图片识别、公共网页搜索或服务器命令执行。我可以继续协助博客问答、全文摘要、天气查询和普通文本问题。";
+    }
+    return "";
   }
 
   private Map<String, Object> assistantToolMessage(AiComputeClient.AgentTurn turn) {

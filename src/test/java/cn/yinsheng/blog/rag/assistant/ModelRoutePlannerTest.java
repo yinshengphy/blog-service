@@ -83,4 +83,27 @@ class ModelRoutePlannerTest {
     assertThat(plan.route()).isEqualTo(ModelRoutePlanner.Route.DIRECT_PERSONA);
     assertThat(plan.toolName()).isEmpty();
   }
+
+  @Test
+  void shouldRecognizeCapabilityAsIndependentIntent() {
+    AiComputeClient ai = mock(AiComputeClient.class);
+    when(ai.classify(anyString(), anyString())).thenReturn("{\"route\":\"CAPABILITY\"}");
+    ModelRoutePlanner planner = new ModelRoutePlanner(ai, new ObjectMapper());
+
+    var plan = planner.plan(new ChatRequest("你有哪些能力", "s1", null));
+
+    assertThat(plan.route()).isEqualTo(ModelRoutePlanner.Route.CAPABILITY);
+    assertThat(plan.toolName()).isEmpty();
+  }
+
+  @Test
+  void shouldKeepWeatherQuestionAsCityFallbackWhenModelOmitsCity() {
+    AiComputeClient ai = mock(AiComputeClient.class);
+    when(ai.classify(anyString(), anyString())).thenReturn("{\"route\":\"WEATHER\"}");
+    ModelRoutePlanner planner = new ModelRoutePlanner(ai, new ObjectMapper());
+
+    var plan = planner.plan(new ChatRequest("上海今天下雨吗", "s1", null));
+
+    assertThat(plan.arguments()).containsEntry("city", "上海今天下雨吗");
+  }
 }

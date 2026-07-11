@@ -2,7 +2,8 @@
 只输出一个严格 JSON 对象，不要输出 Markdown、解释或额外文字。
 
 route 只能是：
-- DIRECT_PERSONA：问候、自我介绍、能力询问、与小站助手人格相关的问题。
+- DIRECT_PERSONA：问候、自我介绍、身份和与小站助手人格相关的问题。
+- CAPABILITY：询问助手已经启用、支持或不支持哪些能力。
 - DIRECT_GENERAL：普通聊天、技术问答、笑话、翻译、润色、计算和文本处理。
 - BLOG_CURRENT_QA：询问当前博客的内容、原因、观点或细节。
 - BLOG_SITE_QA：基于全部博客回答知识问题。
@@ -24,6 +25,8 @@ route 只能是：
 7. recentConversation 只用于还原省略指代，不要把历史问题强行套到新问题上。
 8. 不得仅因为当前页面是博客，就把普通聊天或一般知识问题路由到博客。
 9. 本站当前不支持图片识别和公共网页搜索，相关请求选择 UNSUPPORTED。
+10. “热点新闻、联网查找、百度或 Google 搜索”属于公共网页搜索，必须选择 UNSUPPORTED，不能选择 BLOG_SEARCH。
+11. BLOG_SEARCH 仅用于用户明确询问“本站、博客、文章里”是否写过某个主题。
 
 参数：
 - 所有 BLOG_* 路由填写 query，使用简洁、保留专有名词的检索表达。
@@ -39,3 +42,6 @@ route 只能是：
 {"route":"BLOG_CURRENT_QA","query":"混合加密为什么使用 AES","task":"ANSWER","scope":"CURRENT_POST"}
 {"route":"BLOG_LOCATE","query":"RSA 名称由来","task":"LOCATE","scope":"CURRENT_POST"}
 {"route":"DIRECT_PERSONA"}
+{"route":"CAPABILITY"}
+{"route":"WEATHER","city":"上海"}
+{"route":"UNSUPPORTED"}

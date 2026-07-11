@@ -34,7 +34,7 @@ public class BlogQaTool implements ToolRegistry.ToolHandler {
 
   @Override
   public ToolDefinition definition() {
-    return new ToolDefinition("blog_qa", "Answer, search, locate, or recommend strictly from this site's indexed blog evidence.", Map.of(
+    return new ToolDefinition("blog_qa", "基于本站索引证据进行博客问答、章节定位、站内搜索和文章推荐", Map.of(
         "type", "object",
         "properties", Map.of(
             "query", Map.of("type", "string"),

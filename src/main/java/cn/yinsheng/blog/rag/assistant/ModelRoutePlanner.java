@@ -48,6 +48,7 @@ public class ModelRoutePlanner {
       copyText(node, arguments, "focus");
       copyText(node, arguments, "city");
       applyBlogDefaults(route, arguments, request);
+      if (route == Route.WEATHER) arguments.putIfAbsent("city", request.question().trim());
       if (route == Route.BLOG_SUMMARY && !arguments.containsKey("target")
           && (request.pageContext() == null || !request.pageContext().isBlogPost())) {
         arguments.put("target", request.question().trim());
@@ -101,6 +102,7 @@ public class ModelRoutePlanner {
 
   public enum Route {
     DIRECT_PERSONA,
+    CAPABILITY,
     DIRECT_GENERAL,
     BLOG_CURRENT_QA,
     BLOG_SITE_QA,

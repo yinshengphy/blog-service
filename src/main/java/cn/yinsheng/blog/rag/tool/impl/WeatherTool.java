@@ -24,7 +24,7 @@ public class WeatherTool implements ToolRegistry.ToolHandler {
 
   @Override
   public ToolDefinition definition() {
-    return new ToolDefinition("weather", "Get real current weather for a city. Never invent weather data; ask for a city when it is missing.", Map.of(
+    return new ToolDefinition("weather", "查询指定城市的实时天气，数据来自 Open-Meteo", Map.of(
         "type", "object",
         "properties", Map.of("city", Map.of("type", "string")),
         "required", List.of("city")

@@ -48,6 +48,13 @@ public class OpenMeteoWeatherProvider implements WeatherProvider {
   @Override
   public WeatherReport currentWeather(String city) {
     CityLocation location = KNOWN_CITY_LOCATIONS.get(city);
+    if (location == null) {
+      location = KNOWN_CITY_LOCATIONS.entrySet().stream()
+          .filter(entry -> city.contains(entry.getKey()))
+          .map(Map.Entry::getValue)
+          .findFirst()
+          .orElse(null);
+    }
     if (location != null) {
       return forecast(location);
     }

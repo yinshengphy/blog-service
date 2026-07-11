@@ -38,7 +38,7 @@ public class BlogSummaryTool implements ToolRegistry.ToolHandler {
 
   @Override
   public ToolDefinition definition() {
-    return new ToolDefinition("blog_summary", "Summarize the complete current blog post or a specifically named post. This tool reads every ordered chunk instead of vector-searching only a few fragments.", Map.of(
+    return new ToolDefinition("blog_summary", "读取当前或指定博客的完整有序正文并生成全文摘要", Map.of(
         "type", "object",
         "properties", Map.of(
             "target", Map.of("type", "string", "description", "Article title or slug. Leave empty only for the current page."),
