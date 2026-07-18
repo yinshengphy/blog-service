@@ -175,13 +175,21 @@ jobs:
           GHCR_TOKEN: ${{ github.token }}
           IMAGE_TAG: ${{ steps.image.outputs.tag }}
         run: |
-          mvn -B -DskipTests \
-            -Dmaven.repo.local="$PWD/.runner-cache/m2" \
-            -Djib.to.image="ghcr.io/yinshengphy/blog-service:${IMAGE_TAG}" \
-            -Djib.to.auth.username="$GHCR_USER" \
-            -Djib.to.auth.password="$GHCR_TOKEN" \
-            jib:build
-          echo "已发布 ghcr.io/yinshengphy/blog-service:${IMAGE_TAG}"
+          for attempt in 1 2 3; do
+            if mvn -B -DskipTests \
+              -Dmaven.repo.local="$PWD/.runner-cache/m2" \
+              -Djib.to.image="ghcr.io/yinshengphy/blog-service:${IMAGE_TAG}" \
+              -Djib.to.auth.username="$GHCR_USER" \
+              -Djib.to.auth.password="$GHCR_TOKEN" \
+              jib:build; then
+              echo "已发布 ghcr.io/yinshengphy/blog-service:${IMAGE_TAG}"
+              exit 0
+            fi
+            echo "镜像发布失败，等待后重试（${attempt}/3）"
+            sleep $((attempt * 10))
+          done
+          echo "镜像发布重试次数已用尽"
+          exit 1
 
       - name: 更新生产环境镜像版本
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
