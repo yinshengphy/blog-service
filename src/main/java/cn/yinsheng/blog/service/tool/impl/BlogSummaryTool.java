@@ -72,7 +72,8 @@ public class BlogSummaryTool implements ToolRegistry.ToolHandler {
     );
     List<RetrievedChunk> citedChunks = representativeChunks(chunks);
     List<Citation> citations = citationBuilder.build(citedChunks, "");
-    List<RelatedPost> related = relatedPostBuilder.build(citedChunks);
+    String currentSlug = context.pageContext() != null && context.pageContext().isBlogPost() ? context.pageContext().slug() : null;
+    List<RelatedPost> related = relatedPostBuilder.build(citedChunks, currentSlug);
     String content = "Complete article summary generated from " + chunks.size() + " ordered chunks:\n" + summary
         + "\nUse citation markers [1] through [" + citations.size() + "] when presenting this summary.";
     return ToolResult.success(call, content, citations, related, Map.of("slug", slug, "chunkCount", chunks.size(), "summaryLevels", partials.size() > 1 ? 2 : 1));

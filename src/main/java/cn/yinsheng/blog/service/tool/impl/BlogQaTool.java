@@ -69,7 +69,8 @@ public class BlogQaTool implements ToolRegistry.ToolHandler {
     }
     List<RetrievedChunk> evidence = distinctEvidence(chunks);
     List<Citation> citations = citationBuilder.build(evidence, "");
-    List<RelatedPost> related = relatedPostBuilder.build(evidence);
+    String currentSlug = context.pageContext() != null && context.pageContext().isBlogPost() ? context.pageContext().slug() : null;
+    List<RelatedPost> related = relatedPostBuilder.build(evidence, currentSlug);
     StringBuilder content = new StringBuilder(taskInstruction(task));
     for (int i = 0; i < evidence.size(); i++) {
       RetrievedChunk chunk = evidence.get(i);
