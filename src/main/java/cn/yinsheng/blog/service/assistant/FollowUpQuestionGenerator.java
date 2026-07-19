@@ -30,7 +30,7 @@ public class FollowUpQuestionGenerator {
           .map(Citation::section)
           .filter(section -> section != null && !section.isBlank())
           .limit(2)
-          .forEach(section -> values.add("能展开讲讲「" + compact(section, 24) + "」吗？"));
+          .forEach(section -> values.add("展开讲讲「" + compact(section, 12) + "」"));
     }
     if (relatedPosts != null && !relatedPosts.isEmpty()) {
       values.add("还有哪些相关文章值得一起看？");
