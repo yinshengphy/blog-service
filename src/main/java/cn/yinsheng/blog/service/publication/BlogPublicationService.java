@@ -39,6 +39,7 @@ public class BlogPublicationService {
   }
 
   public PublicationStatus status(String idempotencyKey) {
+    requireEnabled();
     return store.status(idempotencyKey)
         .orElseThrow(() -> new PublicationNotFoundException(idempotencyKey));
   }

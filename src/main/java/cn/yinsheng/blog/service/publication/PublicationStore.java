@@ -24,7 +24,9 @@ public class PublicationStore {
 
   @PostConstruct
   void initialize() {
-    ensureSchema();
+    if (properties.enabled()) {
+      ensureSchema();
+    }
   }
 
   public PublicationReceipt enqueue(PublicationKind kind, String idempotencyKey, String payload) {
