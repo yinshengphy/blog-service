@@ -62,12 +62,10 @@ jobs:
           GHCR_TOKEN: ${{ github.token }}
           IMAGE_TAG: ${{ steps.image.outputs.tag }}
         run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
           for attempt in 1 2 3; do
-            if mvn -B -DskipTests \
-              -Djib.to.image="ghcr.io/yinshengphy/blog-service:${IMAGE_TAG}" \
-              -Djib.to.auth.username="$GHCR_USER" \
-              -Djib.to.auth.password="$GHCR_TOKEN" \
-              jib:build; then
+            if docker build --pull -t "ghcr.io/yinshengphy/blog-service:${IMAGE_TAG}" . \
+              && docker push "ghcr.io/yinshengphy/blog-service:${IMAGE_TAG}"; then
               echo "已发布 ghcr.io/yinshengphy/blog-service:${IMAGE_TAG}"
               exit 0
             fi

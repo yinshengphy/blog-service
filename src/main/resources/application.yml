@@ -45,6 +45,21 @@ weather:
   amap:
     key: ${WEATHER_AMAP_KEY:}
 
+publication:
+  enabled: ${PUBLICATION_ENABLED:false}
+  api-enabled: ${PUBLICATION_API_ENABLED:true}
+  worker-enabled: ${PUBLICATION_WORKER_ENABLED:false}
+  api-token: ${PUBLICATION_API_TOKEN:}
+  db-path: ${PUBLICATION_DB_PATH:/data/publications.db}
+  repo-uri: ${PUBLICATION_REPO_URI:git@github.com:yinshengphy/blog.git}
+  branch: ${PUBLICATION_BRANCH:master}
+  ssh-key-path: ${PUBLICATION_SSH_KEY_PATH:/var/run/secrets/blog-publisher/id_ed25519}
+  known-hosts-path: ${PUBLICATION_KNOWN_HOSTS_PATH:/var/run/secrets/blog-publisher/known_hosts}
+  author-name: ${PUBLICATION_GIT_AUTHOR_NAME:blog-publisher}
+  author-email: ${PUBLICATION_GIT_AUTHOR_EMAIL:blog-publisher@yinshengphy.cn}
+  worker-poll-ms: ${PUBLICATION_WORKER_POLL_MS:10000}
+  max-attempts: ${PUBLICATION_MAX_ATTEMPTS:8}
+
 
 management:
   endpoints:
