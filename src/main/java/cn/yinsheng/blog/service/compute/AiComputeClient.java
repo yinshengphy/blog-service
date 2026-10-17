@@ -126,6 +126,7 @@ public class AiComputeClient {
 
   public String chatStream(String systemPrompt, String userPrompt, Consumer<String> deltaConsumer) {
     StringBuilder answer = new StringBuilder();
+    boolean completed = false;
     Map<String, Object> body = Map.of(
         "model", properties.chatModel(),
         "stream", true,
@@ -161,10 +162,16 @@ public class AiComputeClient {
             continue;
           }
           String data = line.substring("data:".length()).trim();
-          if (data.isBlank() || "[DONE]".equals(data)) {
+          if ("[DONE]".equals(data)) {
+            completed = true;
+            break;
+          }
+          if (data.isBlank()) {
             continue;
           }
           JsonNode node = objectMapper.readTree(data);
+          if (node.has("error")) throw new IllegalStateException("模型响应中断，请重试");
+          if (node.path("choices").path(0).hasNonNull("finish_reason")) completed = true;
           String delta = node.path("choices").path(0).path("delta").path("content").asText("");
           if (!delta.isEmpty()) {
             answer.append(delta);
@@ -179,6 +186,7 @@ public class AiComputeClient {
       throw new IllegalStateException("AI Compute streaming chat request was interrupted", ex);
     }
     String value = answer.toString().trim();
+    if (!completed) throw new IllegalStateException("模型响应未完整接收，请重试");
     if (value.isBlank()) {
       throw new IllegalStateException("AI Compute streaming chat response is empty");
     }
@@ -191,7 +199,8 @@ public class AiComputeClient {
       Consumer<String> deltaConsumer
   ) {
     StringBuilder answer = new StringBuilder();
-    List<ToolCall> toolCalls = new ArrayList<>();
+    StreamToolCalls toolCalls = new StreamToolCalls(objectMapper);
+    boolean completed = false;
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("model", properties.chatModel());
     body.put("stream", true);
@@ -226,21 +235,24 @@ public class AiComputeClient {
             continue;
           }
           String data = line.substring("data:".length()).trim();
-          if (data.isBlank() || "[DONE]".equals(data)) {
+          if ("[DONE]".equals(data)) {
+            completed = true;
+            break;
+          }
+          if (data.isBlank()) {
             continue;
           }
-          JsonNode delta = objectMapper.readTree(data).path("choices").path(0).path("delta");
+          JsonNode event = objectMapper.readTree(data);
+          if (event.has("error")) throw new IllegalStateException("模型响应中断，请重试");
+          JsonNode choice = event.path("choices").path(0);
+          if (choice.hasNonNull("finish_reason")) completed = true;
+          JsonNode delta = choice.path("delta");
           String content = delta.path("content").asText("");
           if (!content.isEmpty()) {
             answer.append(content);
             deltaConsumer.accept(content);
           }
-          JsonNode calls = delta.path("tool_calls");
-          if (calls.isArray()) {
-            for (JsonNode call : calls) {
-              toolCalls.add(parseToolCall(call));
-            }
-          }
+          toolCalls.accept(delta.path("tool_calls"));
         }
       }
     } catch (IOException ex) {
@@ -249,7 +261,8 @@ public class AiComputeClient {
       Thread.currentThread().interrupt();
       throw new IllegalStateException("AI Compute agent streaming request was interrupted", ex);
     }
-    return new AgentTurn(answer.toString().trim(), List.copyOf(toolCalls));
+    if (!completed) throw new IllegalStateException("模型响应未完整接收，请重试");
+    return new AgentTurn(answer.toString().trim(), toolCalls.complete().stream().map(this::parseToolCall).toList());
   }
 
   public record AgentTurn(String content, List<ToolCall> toolCalls) {

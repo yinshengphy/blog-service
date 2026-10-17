@@ -8,7 +8,7 @@ spring:
 rag:
   ai-compute-base-url: ${AI_COMPUTE_BASE_URL:http://ai-compute-gateway.ai.svc.cluster.local:8080}
   ai-compute-token: ${AI_COMPUTE_API_TOKEN:}
-  chat-model: ${RAG_CHAT_MODEL:huihui-qwen3:4b-instruct-2507-abliterated-q4_K_M}
+  chat-model: ${RAG_CHAT_MODEL:gemini-3.8-flash-high}
   embedding-model: ${RAG_EMBEDDING_MODEL:bge-m3}
   qdrant-url: ${QDRANT_URL:http://qdrant:6333}
   qdrant-collection: ${QDRANT_COLLECTION:blog_chunks}
@@ -16,7 +16,7 @@ rag:
   top-k: ${RAG_TOP_K:3}
   max-context-chars: ${RAG_MAX_CONTEXT_CHARS:8000}
   max-answer-tokens: ${RAG_MAX_ANSWER_TOKENS:900}
-  chat-concurrency: ${CHAT_CONCURRENCY:1}
+  chat-concurrency: ${CHAT_CONCURRENCY:2}
   chat-queue-timeout-ms: ${CHAT_QUEUE_TIMEOUT_MS:30000}
   request-timeout-seconds: ${REQUEST_TIMEOUT_SECONDS:120}
   content-dir: ${BLOG_CONTENT_DIR:/app/content/posts}
