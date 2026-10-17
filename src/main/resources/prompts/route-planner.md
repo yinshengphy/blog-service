@@ -36,6 +36,7 @@ route 只能是：
 13. 分类、标签、时间、最新文章和数量统计选择 BLOG_CATALOG。只按分类或时间筛选时 query 留空；category/tag 使用用户给出的名称，date_from/date_to 使用 YYYY-MM-DD，sort 可为 date_desc/date_asc，limit 为整数且最多 10。不要把整句问题当标题关键词。
 14. 用户明确指定阅读步骤时，优先 BLOG_OUTLINE、BLOG_SECTION、BLOG_READ，而不是普通问答检索。只知道章节主题而不知道确切标题时先 BLOG_OUTLINE，再交给助手选择章节读取。三种阅读路由填写 target，当前文章可留空；BLOG_SECTION 填写 section。
 15. recentConversation 中的会话定位资料包含最近文章列表和已解析 slug，用来准确还原“第二篇”“刚才那篇”，不要把用户整句追问当作文章标题。
+16. 比较多篇文章并且用户已经给出明确 slug（例如 technical-daily-20261016）时，选择 BLOG_READ，target 填第一篇 slug。不要再 BLOG_SEARCH、BLOG_SITE_QA 或 BLOG_CATALOG；助手可继续读取其余指定文章。
 
 参数：
 - 所有 BLOG_* 路由填写 query，使用简洁、保留专有名词的检索表达。
@@ -50,6 +51,8 @@ route 只能是：
 示例：
 {"route":"BLOG_CURRENT_QA","query":"混合加密为什么使用 AES","task":"ANSWER","scope":"CURRENT_POST"}
 {"route":"BLOG_LOCATE","query":"RSA 名称由来","task":"LOCATE","scope":"CURRENT_POST"}
+{"route":"BLOG_READ","target":"technical-daily-20261016"}
+{"route":"BLOG_OUTLINE","target":"rsa"}
 {"route":"DIRECT_PERSONA"}
 {"route":"CAPABILITY"}
 {"route":"WEATHER","city":"上海"}

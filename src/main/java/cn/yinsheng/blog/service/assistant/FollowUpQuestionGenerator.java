@@ -34,10 +34,7 @@ public class FollowUpQuestionGenerator {
           .forEach(section -> values.add("「" + section + "」有哪些值得注意的细节？"));
     }
     if (relatedPosts != null && !relatedPosts.isEmpty()) {
-      List<String> titles = relatedPosts.stream().map(RelatedPost::title).distinct().limit(2).toList();
-      if (titles.size() == 2 && titles.stream().allMatch(t -> t.length() <= 35)) {
-        values.add("对比《" + titles.get(0) + "》和《" + titles.get(1) + "》的观点");
-      } else values.add("还有哪些相关文章值得一起看？");
+      values.add("还有哪些文章讨论了相关概念？");
     }
 
     switch (route) {
@@ -71,8 +68,4 @@ public class FollowUpQuestionGenerator {
     return new ArrayList<>(values).stream().limit(limit).toList();
   }
 
-  private String compact(String value, int maxChars) {
-    String text = value.trim();
-    return text.length() <= maxChars ? text : text.substring(0, maxChars) + "…";
-  }
 }
