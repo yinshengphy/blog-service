@@ -5,6 +5,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,6 +40,33 @@ public class BlogPublicationService {
     requireEnabled();
     OffsetDateTime.parse(request.discoveredAt());
     return enqueue(PublicationKind.BREAKING_EVENT, request.idempotencyKey(), request);
+  }
+
+  public PublicationReceipt publishDailyNewsSection(DailyNewsSectionPublicationRequest request) {
+    requireEnabled();
+    LocalDate date = LocalDate.parse(request.date());
+    String expectedSlug = "daily-news-" + date.toString().replace("-", "");
+    if (!expectedSlug.equals(request.slug())) {
+      throw new IllegalArgumentException("日报 slug 与日期不匹配");
+    }
+    String body = request.body().strip();
+    if (body.startsWith("---") || !body.startsWith("## 境外报道与争议议题")
+        || body.contains("<!-- news-review:")) {
+      throw new IllegalArgumentException("章节正文格式不合法");
+    }
+    if (!sha256(body).equals(request.sectionHash())) {
+      throw new IllegalArgumentException("章节正文 hash 不匹配");
+    }
+    return enqueue(PublicationKind.DAILY_NEWS_SECTION, request.idempotencyKey(), request);
+  }
+
+  private String sha256(String value) {
+    try {
+      return HexFormat.of().formatHex(
+          MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException ex) {
+      throw new IllegalStateException("运行环境缺少 SHA-256", ex);
+    }
   }
 
   public PublicationStatus status(String idempotencyKey) {

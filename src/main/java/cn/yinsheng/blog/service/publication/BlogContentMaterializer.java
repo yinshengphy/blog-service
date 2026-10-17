@@ -20,6 +20,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class BlogContentMaterializer {
   private static final long BREAKING_RETENTION_SECONDS = 72 * 60 * 60;
+  static final String REVIEW_SECTION_START = "<!-- news-review:start -->";
+  static final String REVIEW_SECTION_END = "<!-- news-review:end -->";
   private final ObjectMapper objectMapper;
 
   public BlogContentMaterializer(ObjectMapper objectMapper) {
@@ -81,6 +83,36 @@ public class BlogContentMaterializer {
     sorted.forEach(output::add);
     objectMapper.writerWithDefaultPrettyPrinter().writeValue(target.toFile(), output);
     Files.writeString(target, System.lineSeparator(), StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.APPEND);
+  }
+
+  public void upsertDailyNewsSection(Path repository, DailyNewsSectionPublicationRequest request) throws IOException {
+    Path root = repository.resolve("src/content/posts").normalize();
+    Path target = root.resolve(request.slug() + ".md").normalize();
+    if (!target.startsWith(root) || Files.isSymbolicLink(target) || !Files.isRegularFile(target)) {
+      throw new IllegalArgumentException("目标日报不存在或路径非法");
+    }
+    String markdown = Files.readString(target, StandardCharsets.UTF_8);
+    if (!markdown.startsWith("---\n") || markdown.indexOf("\n---\n", 4) < 0) {
+      throw new IllegalArgumentException("目标日报 front matter 格式不合法");
+    }
+    String block = REVIEW_SECTION_START + "\n" + request.body().strip() + "\n" + REVIEW_SECTION_END;
+    int start = markdown.indexOf(REVIEW_SECTION_START);
+    int end = markdown.indexOf(REVIEW_SECTION_END);
+    int frontMatterEnd = markdown.indexOf("\n---\n", 4) + 5;
+    if ((start >= 0 && start < frontMatterEnd) || (end >= 0 && end < frontMatterEnd)) {
+      throw new IllegalArgumentException("争议议题标记不得位于 front matter");
+    }
+    String updated;
+    if (start >= 0 || end >= 0) {
+      if (start < 0 || end < start || markdown.indexOf(REVIEW_SECTION_START, start + 1) >= 0
+          || markdown.indexOf(REVIEW_SECTION_END, end + 1) >= 0) {
+        throw new IllegalArgumentException("目标日报的争议议题标记不完整");
+      }
+      updated = markdown.substring(0, start) + block + markdown.substring(end + REVIEW_SECTION_END.length());
+    } else {
+      updated = markdown.stripTrailing() + "\n\n" + block + "\n";
+    }
+    Files.writeString(target, updated, StandardCharsets.UTF_8);
   }
 
   private Instant sortTimestamp(JsonNode event) {

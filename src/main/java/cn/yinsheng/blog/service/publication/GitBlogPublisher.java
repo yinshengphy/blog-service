@@ -37,6 +37,8 @@ public class GitBlogPublisher {
         case POST -> materializer.writePost(workspace, objectMapper.readValue(item.payload(), PostPublicationRequest.class));
         case BREAKING_EVENT -> materializer.upsertBreakingEvent(
             workspace, objectMapper.readValue(item.payload(), BreakingEventPublicationRequest.class));
+        case DAILY_NEWS_SECTION -> materializer.upsertDailyNewsSection(
+            workspace, objectMapper.readValue(item.payload(), DailyNewsSectionPublicationRequest.class));
       }
       if (run(workspace, List.of("git", "status", "--porcelain")).isBlank()) {
         return run(workspace, List.of("git", "rev-parse", "HEAD")).trim();
@@ -67,6 +69,7 @@ public class GitBlogPublisher {
     return switch (item.kind()) {
       case POST -> "content: 发布 " + item.idempotencyKey();
       case BREAKING_EVENT -> "content: 更新三日突发 " + item.idempotencyKey();
+      case DAILY_NEWS_SECTION -> "content: 更新日报争议议题 " + item.idempotencyKey();
     };
   }
 

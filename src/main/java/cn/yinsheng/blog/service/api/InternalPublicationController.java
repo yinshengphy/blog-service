@@ -5,6 +5,7 @@ import cn.yinsheng.blog.service.publication.BlogPublicationService;
 import cn.yinsheng.blog.service.publication.BlogPublicationService.PublicationNotFoundException;
 import cn.yinsheng.blog.service.publication.BlogPublicationService.PublicationUnavailableException;
 import cn.yinsheng.blog.service.publication.BreakingEventPublicationRequest;
+import cn.yinsheng.blog.service.publication.DailyNewsSectionPublicationRequest;
 import cn.yinsheng.blog.service.publication.PostPublicationRequest;
 import cn.yinsheng.blog.service.publication.PublicationReceipt;
 import cn.yinsheng.blog.service.publication.PublicationStatus;
@@ -50,6 +51,16 @@ public class InternalPublicationController {
   ) {
     requireAuthorized(authorization);
     PublicationReceipt receipt = publicationService.publishBreakingEvent(request);
+    return ResponseEntity.status(receipt.duplicate() ? HttpStatus.OK : HttpStatus.ACCEPTED).body(receipt);
+  }
+
+  @PostMapping("/internal/publications/daily-news-sections")
+  public ResponseEntity<PublicationReceipt> publishDailyNewsSection(
+      @RequestHeader(value = "Authorization", required = false) String authorization,
+      @Valid @RequestBody DailyNewsSectionPublicationRequest request
+  ) {
+    requireAuthorized(authorization);
+    PublicationReceipt receipt = publicationService.publishDailyNewsSection(request);
     return ResponseEntity.status(receipt.duplicate() ? HttpStatus.OK : HttpStatus.ACCEPTED).body(receipt);
   }
 

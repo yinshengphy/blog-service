@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -48,5 +51,41 @@ class BlogContentMaterializerTest {
     assertThat(events).hasSize(1);
     assertThat(events.get(0).path("fingerprint").asText()).isEqualTo("one");
     assertThat(events.get(0).path("title").asText()).isEqualTo("新突发");
+  }
+
+  @Test
+  void appendsAndIdempotentlyReplacesOnlyTheMarkedDailyNewsSection() throws Exception {
+    Path posts = repository.resolve("src/content/posts");
+    Files.createDirectories(posts);
+    Path post = posts.resolve("daily-news-20261017.md");
+    Files.writeString(post, "---\ntitle: \"日报\"\ndate: \"2026-10-17\"\n---\n\n原有正文\n");
+    String first = "## 境外报道与争议议题\n\n第一版内容";
+    materializer.upsertDailyNewsSection(repository, sectionRequest(first, hash(first)));
+    String second = "## 境外报道与争议议题\n\n第二版内容";
+    materializer.upsertDailyNewsSection(repository, sectionRequest(second, hash(second)));
+
+    String markdown = Files.readString(post);
+    assertThat(markdown).startsWith("---\ntitle: \"日报\"").contains("原有正文")
+        .contains(second).doesNotContain("第一版内容");
+    assertThat(markdown.split(BlogContentMaterializer.REVIEW_SECTION_START, -1)).hasSize(2);
+    assertThat(markdown.split(BlogContentMaterializer.REVIEW_SECTION_END, -1)).hasSize(2);
+  }
+
+  @Test
+  void refusesMissingDailyNewsPost() {
+    String body = "## 境外报道与争议议题\n\n内容";
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+        () -> materializer.upsertDailyNewsSection(repository, sectionRequest(body, hash(body))))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  private DailyNewsSectionPublicationRequest sectionRequest(String body, String hash) {
+    return new DailyNewsSectionPublicationRequest(
+        "daily-news-section:2026-10-17:v1", "daily-news-20261017", "2026-10-17", hash, body);
+  }
+
+  private String hash(String value) throws Exception {
+    return HexFormat.of().formatHex(
+        MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
   }
 }

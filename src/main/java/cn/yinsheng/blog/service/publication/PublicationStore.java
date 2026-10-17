@@ -33,10 +33,14 @@ public class PublicationStore {
     ensureSchema();
     try (Connection connection = connect()) {
       try (PreparedStatement existing = connection.prepareStatement(
-          "select id, status from publication_outbox where idempotency_key = ?")) {
+          "select id, kind, payload, status from publication_outbox where idempotency_key = ?")) {
         existing.setString(1, idempotencyKey);
         try (ResultSet result = existing.executeQuery()) {
           if (result.next()) {
+            if (!kind.name().equals(result.getString("kind"))
+                || !payload.equals(result.getString("payload"))) {
+              throw new IllegalArgumentException("幂等键已用于不同的发布内容");
+            }
             return new PublicationReceipt(result.getLong("id"), result.getString("status"), true);
           }
         }
