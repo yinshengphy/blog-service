@@ -13,9 +13,11 @@ import org.springframework.stereotype.Component;
 public class CitationNormalizer {
   private static final Pattern MANUAL_LINK = Pattern.compile("(?m)^\\s*\\[\\d+]\\s+(?:https?://\\S+|/\\S+)\\s*$");
   private static final Pattern MARKER = Pattern.compile("\\[(\\d+)]");
+  private static final Pattern NAMED_MARKER = Pattern.compile("\\[(?:Source|来源|源)\\s*(\\d+)]", Pattern.CASE_INSENSITIVE);
 
   public Result normalize(String answer, List<Citation> citations) {
-    String cleaned = MANUAL_LINK.matcher(answer == null ? "" : answer).replaceAll("")
+    String canonical = NAMED_MARKER.matcher(answer == null ? "" : answer).replaceAll("[$1]");
+    String cleaned = MANUAL_LINK.matcher(canonical).replaceAll("")
         .replaceAll("(?m)[ \\t]+$", "")
         .replaceAll("\\n{3,}", "\\n\\n")
         .trim();
@@ -28,7 +30,9 @@ public class CitationNormalizer {
     Matcher matcher = MARKER.matcher(cleaned);
     StringBuffer rewritten = new StringBuffer();
     while (matcher.find()) {
-      int oldIndex = Integer.parseInt(matcher.group(1));
+      int oldIndex;
+      try { oldIndex = Integer.parseInt(matcher.group(1)); }
+      catch (NumberFormatException ex) { matcher.appendReplacement(rewritten, ""); continue; }
       if (oldIndex < 1 || oldIndex > citations.size()) {
         matcher.appendReplacement(rewritten, "");
         continue;

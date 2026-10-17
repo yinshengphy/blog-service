@@ -10,6 +10,14 @@ class CitationNormalizerTest {
   private final CitationNormalizer normalizer = new CitationNormalizer();
 
   @Test
+  void shouldCanonicalizeNamedSourcesAndRejectOverflow() {
+    var result = normalizer.normalize("第二篇 [Source 2]，第一篇 [来源 1]，重复 [source 2]，无效 [999999999999999999999]。",
+        List.of(citation("第一篇", "/a/"), citation("第二篇", "/b/")));
+    assertThat(result.answer()).isEqualTo("第二篇 [1]，第一篇 [2]，重复 [1]，无效 。");
+    assertThat(result.citations()).extracting(Citation::url).containsExactly("/b/", "/a/");
+  }
+
+  @Test
   void shouldRenumberCitationsByFirstAppearance() {
     List<Citation> citations = List.of(
         citation("第一节", "/post/#one"),
