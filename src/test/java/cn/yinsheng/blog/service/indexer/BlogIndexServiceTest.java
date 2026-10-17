@@ -72,24 +72,40 @@ class BlogIndexServiceTest {
     when(statusRepository.load("/data/index.db")).thenReturn(Map.of());
     when(chunker.chunk(post)).thenReturn(List.of(chunk));
     when(aiComputeClient.embed(any())).thenReturn(List.of(0.1, 0.2));
+    when(properties.embeddingDimension()).thenReturn(2);
+    when(qdrantClient.beginRebuild(2)).thenReturn("blog_chunks_live_build_test");
 
     IndexResult result = service.rebuild();
 
     assertThat(result.completed()).isTrue();
     assertThat(result.indexedSlugs()).containsExactly("post");
-    verify(qdrantClient).recreateCollection(1024);
+    verify(qdrantClient, never()).recreateCollection(org.mockito.ArgumentMatchers.anyInt());
     verify(statusRepository).clear("/data/index.db");
-    verify(qdrantClient).upsert(anyList(), anyList());
+    verify(qdrantClient).upsertInto(org.mockito.ArgumentMatchers.eq("blog_chunks_live_build_test"), anyList(), anyList());
+    verify(qdrantClient).activateRebuild("blog_chunks_live_build_test", 1);
   }
 
   @Test
-  void 聊天忙时不访问向量数据库() {
+  void 聊天忙时仍能进行独立向量索引() throws Exception {
     when(chatLimiter.isBusy()).thenReturn(true);
+    when(postReader.readPosts(any())).thenReturn(List.of());
 
     IndexResult result = service.synchronize();
 
-    assertThat(result.status()).isEqualTo("BUSY");
-    verify(qdrantClient, never()).ensureCollection(1024);
+    assertThat(result.completed()).isTrue();
+    verify(qdrantClient).ensureCollection(1024);
+  }
+
+  @Test
+  void 重建失败不会切换或清空现有索引() throws Exception {
+    BlogPost post = post("new");
+    when(postReader.readPosts(any())).thenReturn(List.of(post));
+    when(qdrantClient.beginRebuild(1024)).thenReturn("staging");
+    when(chunker.chunk(post)).thenThrow(new IllegalStateException("模拟分块失败"));
+    assertThat(service.rebuild().status()).isEqualTo("FAILED");
+    verify(qdrantClient, never()).activateRebuild(any(), org.mockito.ArgumentMatchers.anyInt());
+    verify(statusRepository, never()).clear(any());
+    verify(qdrantClient, never()).recreateCollection(org.mockito.ArgumentMatchers.anyInt());
   }
 
   private BlogPost post(String hash) {

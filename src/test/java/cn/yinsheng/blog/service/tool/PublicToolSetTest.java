@@ -13,8 +13,9 @@ class PublicToolSetTest {
   private ToolRegistry registry;
 
   @Test
-  void shouldExposeExactlyFourPublicTools() {
+  void shouldExposeOnlyReadOnlyKnowledgeAndWeatherTools() {
     assertThat(registry.definitions()).extracting(ToolDefinition::name)
-        .containsExactlyInAnyOrder("blog_qa", "blog_summary", "weather");
+        .containsExactlyInAnyOrder("blog_qa", "blog_summary", "weather", "search_posts",
+            "read_post_outline", "read_section", "read_post", "get_site_profile");
   }
 }

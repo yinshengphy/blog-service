@@ -59,9 +59,6 @@ public class BlogIndexService {
       return result(mode, "BUSY", 0, 0, 0, 0, List.of(), "已有索引任务正在执行");
     }
     try {
-      if (chatLimiter.isBusy()) {
-        return result(mode, "BUSY", 0, 0, 0, 0, List.of(), "聊天服务正在使用模型，请稍后重试");
-      }
       return doIndex(mode);
     } catch (Exception ex) {
       log.error("博客索引失败，模式={}", mode, ex);
@@ -77,8 +74,7 @@ public class BlogIndexService {
     posts.forEach(post -> currentPosts.put(post.slug(), post));
 
     if (mode == IndexMode.REBUILD) {
-      qdrantClient.recreateCollection(properties.embeddingDimension());
-      statusRepository.clear(properties.indexDbPath());
+      return rebuildSafely(posts);
     } else {
       qdrantClient.ensureCollection(properties.embeddingDimension());
     }
@@ -100,18 +96,6 @@ public class BlogIndexService {
       if (mode == IndexMode.INCREMENTAL && row != null && row.contentHash().equals(post.contentHash())) {
         skipped++;
         continue;
-      }
-      if (chatLimiter.isBusy()) {
-        return result(
-            mode,
-            "BUSY",
-            posts.size(),
-            indexedSlugs.size(),
-            skipped,
-            deleted,
-            indexedSlugs,
-            "聊天请求开始执行，索引已暂停；再次调用会从未完成文章继续"
-        );
       }
       indexPost(post);
       indexedSlugs.add(post.slug());
@@ -137,14 +121,31 @@ public class BlogIndexService {
     if (!vectors.isEmpty()) {
       qdrantClient.ensureCollection(vectors.get(0).size());
     }
-    qdrantClient.deleteBySlug(post.slug());
-    int batchSize = Math.max(1, properties.indexerBatchSize());
-    for (int start = 0; start < chunks.size(); start += batchSize) {
-      int end = Math.min(chunks.size(), start + batchSize);
-      qdrantClient.upsert(chunks.subList(start, end), vectors.subList(start, end));
-    }
+    qdrantClient.replacePost(post.slug(), chunks, vectors);
     statusRepository.upsert(properties.indexDbPath(), post, chunks.size());
     log.info("博客已建立索引，slug={}，分块数={}", post.slug(), chunks.size());
+  }
+
+  private IndexResult rebuildSafely(List<BlogPost> posts) {
+    if (posts.isEmpty()) throw new IllegalStateException("公开文章目录为空，保留现有索引");
+    String staging = qdrantClient.beginRebuild(properties.embeddingDimension());
+    Map<String, Integer> chunkCounts = new LinkedHashMap<>();
+    int total = 0;
+    for (BlogPost post : posts) {
+      List<ChunkRecord> chunks = chunker.chunk(post);
+      if (chunks.isEmpty()) throw new IllegalStateException("文章正文为空，停止重建并保留旧索引");
+      List<List<Double>> vectors = chunks.stream().map(c -> aiComputeClient.embed(c.retrievalText())).toList();
+      if (vectors.stream().anyMatch(v -> v.size() != properties.embeddingDimension())) {
+        throw new IllegalStateException("向量维度校验失败，保留旧索引");
+      }
+      qdrantClient.upsertInto(staging, chunks, vectors);
+      chunkCounts.put(post.slug(), chunks.size()); total += chunks.size();
+    }
+    qdrantClient.activateRebuild(staging, total);
+    statusRepository.clear(properties.indexDbPath());
+    for (BlogPost post : posts) statusRepository.upsert(properties.indexDbPath(), post, chunkCounts.get(post.slug()));
+    return result(IndexMode.REBUILD, "COMPLETED", posts.size(), posts.size(), 0, 0,
+        posts.stream().map(BlogPost::slug).toList(), "新索引已完成校验并原子切换，旧集合保留用于回滚");
   }
 
   private IndexResult result(

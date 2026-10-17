@@ -160,7 +160,8 @@ public class ChatController {
               "mode", response.mode() == null ? "" : response.mode(),
               "intent", response.intent() == null ? "" : response.intent(),
               "usedSkills", response.usedSkills(),
-              "usedTools", response.usedTools()
+              "usedTools", response.usedTools(),
+              "status", response.metadata().getOrDefault("status", "正在整理回答")
           )));
     } catch (Exception ex) {
       throw new IllegalStateException("Failed to send chat meta", ex);

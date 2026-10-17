@@ -43,6 +43,15 @@ class BlogSummaryToolTest {
     assertThat(result.success()).isTrue();
     assertThat(result.content()).contains("4 ordered chunks", "完整摘要");
     assertThat(result.metadata()).containsEntry("chunkCount", 4);
+    var cached = tool.execute(new ToolCall("2", "blog_summary", Map.of()),
+        new ToolExecutionContext("", "", new PageContext("BLOG_POST", "rsa", "RSA", "/rsa/", "")));
+    assertThat(cached.metadata()).containsEntry("summaryCacheHit", true);
+    org.mockito.Mockito.verify(ai, org.mockito.Mockito.times(1)).chat(anyString(), anyString());
+    when(qdrant.listBySlug("rsa")).thenReturn(List.of(chunk(1, "更新章节", "更新正文")));
+    var updated = tool.execute(new ToolCall("3", "blog_summary", Map.of()),
+        new ToolExecutionContext("", "", new PageContext("BLOG_POST", "rsa", "RSA", "/rsa/", "")));
+    assertThat(updated.metadata()).containsEntry("summaryCacheHit", false);
+    org.mockito.Mockito.verify(ai, org.mockito.Mockito.times(2)).chat(anyString(), anyString());
   }
 
   private RetrievedChunk chunk(int index, String section, String content) {

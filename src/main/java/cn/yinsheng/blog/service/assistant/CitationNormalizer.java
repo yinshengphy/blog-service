@@ -42,10 +42,6 @@ public class CitationNormalizer {
     matcher.appendTail(rewritten);
 
     String normalized = rewritten.toString().trim();
-    if (ordered.isEmpty() && !normalized.isBlank()) {
-      ordered.add(citations.get(0));
-      normalized = normalized + " [1]";
-    }
     return new Result(normalized, List.copyOf(ordered));
   }
 

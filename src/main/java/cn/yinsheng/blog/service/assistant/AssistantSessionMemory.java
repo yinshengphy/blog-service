@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import cn.yinsheng.blog.service.config.AssistantProperties;
 import cn.yinsheng.blog.service.model.ConversationMessage;
+import cn.yinsheng.blog.service.model.Citation;
+import cn.yinsheng.blog.service.model.PageContext;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -47,7 +49,8 @@ public class AssistantSessionMemory {
     }
     sessions.put(sessionId, new SessionState(
         List.copyOf(messages),
-        Instant.now().plus(Math.max(1, properties.getSessionTtlMinutes()), ChronoUnit.MINUTES)
+        Instant.now().plus(Math.max(1, properties.getSessionTtlMinutes()), ChronoUnit.MINUTES),
+        context(sessionId)
     ));
   }
 
@@ -70,6 +73,26 @@ public class AssistantSessionMemory {
     if (sessionId != null) sessions.remove(sessionId);
   }
 
+  public Map<String, Object> context(String sessionId) {
+    if (sessionId == null || sessionId.isBlank()) return Map.of();
+    SessionState state = sessions.get(sessionId);
+    return state == null || state.expiresAt().isBefore(Instant.now()) ? Map.of() : state.context();
+  }
+
+  public void rememberContext(String sessionId, PageContext page, List<Citation> citations,
+      Map<String, Object> metadata) {
+    if (sessionId == null || sessionId.isBlank()) return;
+    sessions.computeIfPresent(sessionId, (id, state) -> {
+      Map<String, Object> values = new java.util.LinkedHashMap<>(state.context());
+      if (page != null && page.isBlogPost()) values.put("lastReadPost", page);
+      if (!citations.isEmpty()) values.put("recentSources", citations.stream().limit(8)
+          .map(c -> Map.of("title", c.title(), "section", c.section(), "url", c.url())).toList());
+      if (metadata.containsKey("slug")) values.put("resolvedSlug", metadata.get("slug"));
+      if (metadata.containsKey("recentPosts")) values.put("recentPosts", metadata.get("recentPosts"));
+      return new SessionState(state.messages(), state.expiresAt(), Map.copyOf(values));
+    });
+  }
+
   private String compact(String value) {
     if (value == null) return "";
     int maxChars = Math.max(100, properties.getSessionMaxMessageChars());
@@ -81,6 +104,6 @@ public class AssistantSessionMemory {
     sessions.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
   }
 
-  private record SessionState(List<Map<String, Object>> messages, Instant expiresAt) {
+  private record SessionState(List<Map<String, Object>> messages, Instant expiresAt, Map<String, Object> context) {
   }
 }

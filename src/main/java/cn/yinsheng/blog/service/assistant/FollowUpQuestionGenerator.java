@@ -30,10 +30,14 @@ public class FollowUpQuestionGenerator {
           .map(Citation::section)
           .filter(section -> section != null && !section.isBlank())
           .limit(2)
-          .forEach(section -> values.add("展开讲讲「" + compact(section, 12) + "」"));
+          .filter(section -> section.length() <= 60 && !section.equals("文章信息") && !section.equals("文章目录"))
+          .forEach(section -> values.add("「" + section + "」有哪些值得注意的细节？"));
     }
     if (relatedPosts != null && !relatedPosts.isEmpty()) {
-      values.add("还有哪些相关文章值得一起看？");
+      List<String> titles = relatedPosts.stream().map(RelatedPost::title).distinct().limit(2).toList();
+      if (titles.size() == 2 && titles.stream().allMatch(t -> t.length() <= 35)) {
+        values.add("对比《" + titles.get(0) + "》和《" + titles.get(1) + "》的观点");
+      } else values.add("还有哪些相关文章值得一起看？");
     }
 
     switch (route) {

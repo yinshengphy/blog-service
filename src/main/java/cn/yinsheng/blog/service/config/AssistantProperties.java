@@ -4,10 +4,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "assistant")
 public class AssistantProperties {
-  private int maxToolCallsPerRequest = 3;
+  private int maxToolCallsPerRequest = 5;
   private int sessionTtlMinutes = 30;
   private int sessionMaxMessages = 8;
-  private int sessionMaxMessageChars = 900;
+  private int sessionMaxMessageChars = 1000;
   private int sessionMaxEntries = 500;
   private int maxSuggestedQuestions = 3;
 

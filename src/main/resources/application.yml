@@ -30,8 +30,8 @@ rag:
   rate-limit-per-day: ${RATE_LIMIT_PER_DAY:300}
 
 assistant:
-  max-tool-calls-per-request: ${ASSISTANT_MAX_TOOL_CALLS_PER_REQUEST:3}
-  session-ttl-minutes: ${ASSISTANT_SESSION_TTL_MINUTES:120}
+  max-tool-calls-per-request: ${ASSISTANT_MAX_TOOL_CALLS_PER_REQUEST:5}
+  session-ttl-minutes: ${ASSISTANT_SESSION_TTL_MINUTES:30}
   session-max-messages: ${ASSISTANT_SESSION_MAX_MESSAGES:8}
   session-max-message-chars: ${ASSISTANT_SESSION_MAX_MESSAGE_CHARS:1000}
   session-max-entries: ${ASSISTANT_SESSION_MAX_ENTRIES:500}

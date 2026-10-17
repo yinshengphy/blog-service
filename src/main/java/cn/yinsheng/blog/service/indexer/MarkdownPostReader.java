@@ -29,7 +29,8 @@ public class MarkdownPostReader {
           .toList();
       List<BlogPost> posts = new ArrayList<>();
       for (Path file : markdownFiles) {
-        posts.add(readPost(contentDir, file));
+        BlogPost post = readPost(contentDir, file);
+        if (post != null) posts.add(post);
       }
       return posts;
     }
@@ -39,9 +40,11 @@ public class MarkdownPostReader {
     String raw = Files.readString(file, StandardCharsets.UTF_8);
     FrontMatter frontMatter = splitFrontMatter(raw);
     Map<String, Object> data = frontMatter.data();
+    if (Boolean.parseBoolean(String.valueOf(data.getOrDefault("draft", false)))) return null;
     String slug = slugFromPath(contentDir, file);
     String title = stringValue(data.get("title"), slug);
-    String date = stringValue(data.get("date"), "");
+    String date = data.get("date") instanceof java.util.Date value
+        ? value.toInstant().toString() : stringValue(data.get("date"), "");
     String updatedAt = stringValue(data.get("updated_at"), "");
     if (updatedAt.isBlank()) {
       updatedAt = Files.getLastModifiedTime(file).toInstant().toString();

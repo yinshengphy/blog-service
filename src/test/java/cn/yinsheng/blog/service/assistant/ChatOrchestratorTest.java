@@ -83,7 +83,7 @@ class ChatOrchestratorTest {
 
     assertThat(response.intent()).isEqualTo("BLOG_CURRENT_QA");
     assertThat(response.usedTools()).containsExactly("blog_qa");
-    verify(ai).streamCompletion(anyList(), org.mockito.ArgumentMatchers.argThat(List::isEmpty), any());
+    verify(ai).streamCompletion(anyList(), org.mockito.ArgumentMatchers.argThat(tools -> !tools.isEmpty()), any());
   }
 
   private ChatOrchestrator orchestrator(AiComputeClient ai, ToolRegistry registry, ModelRoutePlanner.RoutePlan plan) {
@@ -100,6 +100,37 @@ class ChatOrchestratorTest {
         new CitationNormalizer(),
         new FollowUpQuestionGenerator(new AssistantProperties())
     );
+  }
+
+  @Test
+  void shouldContinueInvestigationAfterPlannedToolAndRemapEvidence() {
+    AiComputeClient ai = mock(AiComputeClient.class);
+    when(ai.streamCompletion(anyList(), anyList(), any()))
+        .thenReturn(new AiComputeClient.AgentTurn("", List.of(new ToolCall("second", "read_post", Map.of("target", "b")))))
+        .thenAnswer(invocation -> {
+          List<Map<String, Object>> messages = invocation.getArgument(0);
+          assertThat(messages.stream().filter(m -> "tool".equals(m.get("role"))).map(m -> String.valueOf(m.get("content"))).toList())
+              .anyMatch(text -> text.contains("[Source 2]"));
+          return new AiComputeClient.AgentTurn("两篇的区别 [1] [2]", List.of());
+        });
+    ToolRegistry.ToolHandler read = new ToolRegistry.ToolHandler() {
+      public ToolDefinition definition() { return new ToolDefinition("read_post", "读取", Map.of("type", "object", "properties", Map.of("target", Map.of("type", "string")))); }
+      public ToolResult execute(ToolCall call, ToolExecutionContext context) {
+        String target = String.valueOf(call.arguments().get("target"));
+        return ToolResult.success(call, "[Source 1] " + target, List.of(new cn.yinsheng.blog.service.model.Citation(target, "正文", "/" + target + "/", target)), List.of(), Map.of());
+      }
+    };
+    ToolRegistry.ToolHandler qa = new ToolRegistry.ToolHandler() {
+      public ToolDefinition definition() { return new ToolDefinition("blog_qa", "检索", Map.of("type", "object")); }
+      public ToolResult execute(ToolCall call, ToolExecutionContext context) {
+        return ToolResult.success(call, "[Source 1] a", List.of(new cn.yinsheng.blog.service.model.Citation("a", "正文", "/a/", "a")), List.of(), Map.of());
+      }
+    };
+    var registry = new ToolRegistry(List.of(qa, read));
+    var result = orchestrator(ai, registry, new ModelRoutePlanner.RoutePlan(ModelRoutePlanner.Route.BLOG_SITE_QA, Map.of()))
+        .answer(new ChatRequest("比较两篇", "multi", null));
+    assertThat(result.usedTools()).containsExactly("blog_qa", "read_post");
+    assertThat(result.citations()).hasSize(2);
   }
 
   private ToolRegistry.ToolHandler handler(String name) {

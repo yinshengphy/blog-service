@@ -43,16 +43,7 @@ public class QdrantClient {
       if (currentSize == vectorSize) {
         return false;
       }
-      log.warn(
-          "Qdrant collection {} vector size changed from {} to {}, recreating it",
-          properties.qdrantCollection(),
-          currentSize,
-          vectorSize
-      );
-      restClient.delete()
-          .uri(collectionUrl() + "?timeout=30")
-          .retrieve()
-          .toBodilessEntity();
+      throw new IllegalStateException("向量维度不一致，必须建立新集合后显式切换，不能覆盖现有索引");
     } catch (HttpClientErrorException.NotFound ignored) {
       log.info("Qdrant collection {} does not exist, creating it", properties.qdrantCollection());
     }
@@ -95,6 +86,10 @@ public class QdrantClient {
   }
 
   public void upsert(List<ChunkRecord> chunks, List<List<Double>> vectors) {
+    upsertInto(properties.qdrantCollection(), chunks, vectors);
+  }
+
+  public void upsertInto(String collection, List<ChunkRecord> chunks, List<List<Double>> vectors) {
     if (chunks.isEmpty()) {
       return;
     }
@@ -108,10 +103,50 @@ public class QdrantClient {
       ));
     }
     restClient.put()
-        .uri(collectionUrl() + "/points?wait=true")
+        .uri(properties.qdrantUrl() + "/collections/" + collection + "/points?wait=true")
         .body(Map.of("points", points))
         .retrieve()
         .toBodilessEntity();
+  }
+
+  public void replacePost(String slug, List<ChunkRecord> chunks, List<List<Double>> vectors) {
+    if (chunks.isEmpty()) throw new IllegalArgumentException("空正文不能覆盖现有索引");
+    // 一次写入整篇的新向量，成功后才删除缩短文章遗留的尾部分块。
+    upsert(chunks, vectors);
+    int lastIndex = chunks.stream().mapToInt(ChunkRecord::chunkIndex).max().orElse(0);
+    restClient.post().uri(collectionUrl() + "/points/delete?wait=true").body(Map.of("filter", Map.of("must", List.of(
+        Map.of("key", "slug", "match", Map.of("value", slug)),
+        Map.of("key", "chunk_index", "range", Map.of("gt", lastIndex)))))).retrieve().toBodilessEntity();
+  }
+
+  public String beginRebuild(int vectorSize) {
+    JsonNode aliases = restClient.get().uri(properties.qdrantUrl() + "/aliases").retrieve().body(JsonNode.class);
+    boolean activeAlias = false;
+    if (aliases != null) for (JsonNode alias : aliases.path("result").path("aliases")) {
+      if (properties.qdrantCollection().equals(alias.path("alias_name").asText())) activeAlias = true;
+    }
+    if (!activeAlias) throw new IllegalStateException("全量重建必须通过索引别名执行，请先完成别名迁移");
+    String staging = properties.qdrantCollection() + "_build_" + UUID.randomUUID().toString().replace("-", "");
+    restClient.put().uri(properties.qdrantUrl() + "/collections/" + staging)
+        .body(Map.of("vectors", Map.of("size", vectorSize, "distance", "Cosine")))
+        .retrieve().toBodilessEntity();
+    return staging;
+  }
+
+  public void activateRebuild(String staging, int expectedPoints) {
+    if (!staging.startsWith(properties.qdrantCollection() + "_build_") || expectedPoints < 1) {
+      throw new IllegalArgumentException("拒绝切换空索引或未知重建集合");
+    }
+    JsonNode count = restClient.post().uri(properties.qdrantUrl() + "/collections/" + staging + "/points/count")
+        .body(Map.of("exact", true)).retrieve().body(JsonNode.class);
+    if (count == null || count.path("result").path("count").asInt(-1) != expectedPoints) {
+      throw new IllegalStateException("重建分块数量校验失败，继续使用旧索引");
+    }
+    restClient.post().uri(properties.qdrantUrl() + "/collections/aliases")
+        .body(Map.of("actions", List.of(
+            Map.of("delete_alias", Map.of("alias_name", properties.qdrantCollection())),
+            Map.of("create_alias", Map.of("alias_name", properties.qdrantCollection(), "collection_name", staging)))))
+        .retrieve().toBodilessEntity();
   }
 
   public List<RetrievedChunk> search(List<Double> vector, int limit) {
@@ -153,34 +188,26 @@ public class QdrantClient {
     body.put("limit", limit);
     body.put("with_payload", true);
     body.put("with_vector", false);
-    JsonNode response = restClient.post()
-        .uri(collectionUrl() + "/points/scroll")
-        .body(body)
-        .retrieve()
-        .body(JsonNode.class);
     List<RetrievedChunk> chunks = new ArrayList<>();
-    if (response != null) {
+    JsonNode offset;
+    do {
+      JsonNode response = restClient.post().uri(collectionUrl() + "/points/scroll")
+          .body(body).retrieve().body(JsonNode.class);
+      if (response == null) throw new IllegalStateException("索引分页响应为空");
       for (JsonNode point : response.path("result").path("points")) {
         chunks.add(readChunk(point, score));
       }
-    }
-    return chunks.stream().sorted(java.util.Comparator.comparingInt(RetrievedChunk::chunkIndex)).toList();
+      offset = response.path("result").path("next_page_offset");
+      if (!offset.isMissingNode() && !offset.isNull()) body.put("offset", offset);
+    } while (!offset.isMissingNode() && !offset.isNull());
+    return chunks.stream().sorted(java.util.Comparator.comparing(RetrievedChunk::slug)
+        .thenComparingInt(RetrievedChunk::chunkIndex)).toList();
   }
 
   public List<PostEntry> listPosts() {
-    Map<String, Object> body = Map.of("limit", 1000, "with_payload", true, "with_vector", false);
-    JsonNode response = restClient.post()
-        .uri(collectionUrl() + "/points/scroll")
-        .body(body)
-        .retrieve()
-        .body(JsonNode.class);
     Map<String, PostEntry> posts = new LinkedHashMap<>();
-    if (response != null) {
-      for (JsonNode point : response.path("result").path("points")) {
-        JsonNode payload = point.path("payload");
-        String slug = payload.path("slug").asText();
-        posts.putIfAbsent(slug, new PostEntry(slug, payload.path("title").asText()));
-      }
+    for (RetrievedChunk chunk : listForRetrieval(null)) {
+      posts.putIfAbsent(chunk.slug(), new PostEntry(chunk.slug(), chunk.title()));
     }
     return new ArrayList<>(posts.values());
   }

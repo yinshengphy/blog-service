@@ -9,6 +9,8 @@ route 只能是：
 - BLOG_SITE_QA：基于全部博客回答知识问题。
 - BLOG_LOCATE：询问某段内容、观点或章节在哪里。
 - BLOG_SEARCH：询问本站是否写过某主题、有哪些相关文章。
+- BLOG_CATALOG：按分类、标签、发布日期查询文章、列出最新文章、统计文章数量。
+- SITE_PROFILE：询问站点名称、作者公开称呼、站点概况；具体项目经历仍使用 BLOG_SITE_QA。
 - BLOG_RECOMMEND：请求推荐相关博客。
 - BLOG_SUMMARY：总结当前博客或指定博客全文。
 - WEATHER：实时天气查询。
@@ -27,7 +29,8 @@ route 只能是：
 9. 本站当前不支持图片识别和公共网页搜索，相关请求选择 UNSUPPORTED。
 10. “热点新闻、联网查找、百度或 Google 搜索”属于公共网页搜索，必须选择 UNSUPPORTED，不能选择 BLOG_SEARCH。
 11. BLOG_SEARCH 仅用于用户明确询问“本站、博客、文章里”是否写过某个主题。
-12. “介绍这个博客和作者”“本站是谁写的”“作者做过哪些项目”等涉及站点与作者事实的问题，选择 BLOG_SITE_QA，query 填写站点介绍、作者及项目经历相关检索词。DIRECT_PERSONA 只介绍助手自身，不能代替作者或站点事实检索。
+12. “介绍这个博客和作者”“本站是谁写的”选择 SITE_PROFILE；“作者做过哪些项目”选择 BLOG_SITE_QA。DIRECT_PERSONA 只介绍助手自身。
+13. 分类、标签、时间、最新文章和数量统计选择 BLOG_CATALOG。只按分类或时间筛选时 query 留空；category/tag 使用用户给出的名称，date_from/date_to 使用 YYYY-MM-DD，sort 可为 date_desc/date_asc，limit 为整数且最多 10。不要把整句问题当标题关键词。
 
 参数：
 - 所有 BLOG_* 路由填写 query，使用简洁、保留专有名词的检索表达。

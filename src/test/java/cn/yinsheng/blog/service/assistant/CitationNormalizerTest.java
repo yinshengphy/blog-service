@@ -24,14 +24,14 @@ class CitationNormalizerTest {
   }
 
   @Test
-  void shouldAddFirstCitationWhenModelOmitsMarker() {
+  void shouldNotInventCitationWhenModelOmitsMarker() {
     CitationNormalizer.Result result = normalizer.normalize(
         "这是基于博客证据的回答。",
         List.of(citation("正文", "/post/#body"))
     );
 
-    assertThat(result.answer()).endsWith("[1]");
-    assertThat(result.citations()).hasSize(1);
+    assertThat(result.answer()).doesNotContain("[1]");
+    assertThat(result.citations()).isEmpty();
   }
 
   private Citation citation(String section, String url) {
