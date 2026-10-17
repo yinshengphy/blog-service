@@ -10,6 +10,9 @@ route 只能是：
 - BLOG_LOCATE：询问某段内容、观点或章节在哪里。
 - BLOG_SEARCH：询问本站是否写过某主题、有哪些相关文章。
 - BLOG_CATALOG：按分类、标签、发布日期查询文章、列出最新文章、统计文章数量。
+- BLOG_OUTLINE：明确要求查看文章目录，或要求先查看目录再寻找、读取某节原文。
+- BLOG_SECTION：明确给出文章章节编号或完整章节标题并要求读取原文。
+- BLOG_READ：要求阅读指定文章原文，但不要求生成全文摘要。
 - SITE_PROFILE：询问站点名称、作者公开称呼、站点概况；具体项目经历仍使用 BLOG_SITE_QA。
 - BLOG_RECOMMEND：请求推荐相关博客。
 - BLOG_SUMMARY：总结当前博客或指定博客全文。
@@ -31,6 +34,8 @@ route 只能是：
 11. BLOG_SEARCH 仅用于用户明确询问“本站、博客、文章里”是否写过某个主题。
 12. “介绍这个博客和作者”“本站是谁写的”选择 SITE_PROFILE；“作者做过哪些项目”选择 BLOG_SITE_QA。DIRECT_PERSONA 只介绍助手自身。
 13. 分类、标签、时间、最新文章和数量统计选择 BLOG_CATALOG。只按分类或时间筛选时 query 留空；category/tag 使用用户给出的名称，date_from/date_to 使用 YYYY-MM-DD，sort 可为 date_desc/date_asc，limit 为整数且最多 10。不要把整句问题当标题关键词。
+14. 用户明确指定阅读步骤时，优先 BLOG_OUTLINE、BLOG_SECTION、BLOG_READ，而不是普通问答检索。只知道章节主题而不知道确切标题时先 BLOG_OUTLINE，再交给助手选择章节读取。三种阅读路由填写 target，当前文章可留空；BLOG_SECTION 填写 section。
+15. recentConversation 中的会话定位资料包含最近文章列表和已解析 slug，用来准确还原“第二篇”“刚才那篇”，不要把用户整句追问当作文章标题。
 
 参数：
 - 所有 BLOG_* 路由填写 query，使用简洁、保留专有名词的检索表达。

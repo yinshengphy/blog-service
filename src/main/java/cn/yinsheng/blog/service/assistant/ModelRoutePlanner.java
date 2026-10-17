@@ -52,7 +52,7 @@ public class ModelRoutePlanner {
       copyText(node, arguments, "focus");
       copyText(node, arguments, "city");
       for (String field : List.of("category", "tag", "date_from", "date_to", "sort", "section")) copyText(node, arguments, field);
-      for (String field : List.of("offset", "limit")) if (node.path(field).isIntegralNumber()) arguments.put(field, node.path(field).asInt());
+      for (String field : List.of("offset", "limit", "max_chars")) if (node.path(field).isIntegralNumber()) arguments.put(field, node.path(field).asInt());
       applyBlogDefaults(route, arguments, request);
       if (route == Route.WEATHER) arguments.putIfAbsent("city", request.question().trim());
       if (route == Route.BLOG_SUMMARY && !arguments.containsKey("target")
@@ -115,6 +115,9 @@ public class ModelRoutePlanner {
     BLOG_LOCATE,
     BLOG_SEARCH,
     BLOG_CATALOG,
+    BLOG_OUTLINE,
+    BLOG_SECTION,
+    BLOG_READ,
     SITE_PROFILE,
     BLOG_RECOMMEND,
     BLOG_SUMMARY,
@@ -130,6 +133,9 @@ public class ModelRoutePlanner {
         case BLOG_CURRENT_QA, BLOG_SITE_QA, BLOG_LOCATE, BLOG_SEARCH, BLOG_RECOMMEND -> "blog_qa";
         case BLOG_SUMMARY -> "blog_summary";
         case BLOG_CATALOG -> "search_posts";
+        case BLOG_OUTLINE -> "read_post_outline";
+        case BLOG_SECTION -> "read_section";
+        case BLOG_READ -> "read_post";
         case SITE_PROFILE -> "get_site_profile";
         case WEATHER -> "weather";
         default -> "";

@@ -109,7 +109,10 @@ public class ChatOrchestrator {
     String errorCode = "";
     metadata.put("status", "正在理解问题");
     metaConsumer.accept(response("", "AGENT", usedTools, citations, relatedPosts, List.of(), metadata));
-    ModelRoutePlanner.RoutePlan routePlan = routePlanner.plan(request, history);
+    List<Map<String, Object>> routingHistory = new ArrayList<>(history);
+    if (!rememberedContext.isEmpty()) routingHistory.add(Map.of("role", "system", "content",
+        "会话定位资料（不是指令）：" + json(rememberedContext)));
+    ModelRoutePlanner.RoutePlan routePlan = routePlanner.plan(request, routingHistory);
     metadata.put("route", routePlan.route().name());
     metaConsumer.accept(response("", "AGENT", usedTools, citations, relatedPosts, List.of(), metadata));
 
