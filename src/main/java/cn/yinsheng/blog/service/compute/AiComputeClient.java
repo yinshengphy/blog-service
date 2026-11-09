@@ -59,8 +59,7 @@ public class AiComputeClient {
         .body(Map.of(
             "model", properties.embeddingModel(),
             "input", List.of(text),
-            "keep_alive", "-1s",
-            "options", Map.of("num_gpu", 0)
+            "keep_alive", "-1s"
         ))
         .retrieve()
         .body(JsonNode.class);
