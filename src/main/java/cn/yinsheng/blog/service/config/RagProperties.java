@@ -7,7 +7,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record RagProperties(
     String aiComputeBaseUrl,
     String aiComputeToken,
+    String ollamaBaseUrl,
     String chatModel,
+    String fallbackChatModel,
     String embeddingModel,
     String qdrantUrl,
     String qdrantCollection,
@@ -30,5 +32,13 @@ public record RagProperties(
 ) {
   public Duration requestTimeout() {
     return Duration.ofSeconds(Math.max(10, requestTimeoutSeconds));
+  }
+
+  public String effectiveOllamaBaseUrl() {
+    return (ollamaBaseUrl != null && !ollamaBaseUrl.isBlank()) ? ollamaBaseUrl : aiComputeBaseUrl;
+  }
+
+  public String effectiveFallbackChatModel() {
+    return (fallbackChatModel != null && !fallbackChatModel.isBlank()) ? fallbackChatModel : chatModel;
   }
 }

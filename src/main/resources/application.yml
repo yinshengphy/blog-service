@@ -6,11 +6,13 @@ spring:
     name: blog-service
 
 rag:
-  ai-compute-base-url: ${AI_COMPUTE_BASE_URL:http://ai-compute-gateway.ai.svc.cluster.local:8080}
-  ai-compute-token: ${AI_COMPUTE_API_TOKEN:}
+  ai-compute-base-url: ${CLIPROXY_BASE_URL:${AI_COMPUTE_BASE_URL:http://10.42.0.1:8318}}
+  ai-compute-token: ${CLIPROXY_API_TOKEN:${AI_COMPUTE_API_TOKEN:}}
+  ollama-base-url: ${OLLAMA_BASE_URL:http://ollama.infra.svc.cluster.local:11434}
   chat-model: ${RAG_CHAT_MODEL:gemini-3.8-flash-high}
+  fallback-chat-model: ${RAG_FALLBACK_CHAT_MODEL:gpt-6-luna}
   embedding-model: ${RAG_EMBEDDING_MODEL:bge-m3}
-  qdrant-url: ${QDRANT_URL:http://qdrant:6333}
+  qdrant-url: ${QDRANT_URL:http://qdrant.infra.svc.cluster.local:6333}
   qdrant-collection: ${QDRANT_COLLECTION:blog_chunks}
   embedding-dimension: ${EMBEDDING_DIMENSION:1024}
   top-k: ${RAG_TOP_K:3}
